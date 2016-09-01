@@ -1,5 +1,6 @@
 {
   "name": "va-validation",
+  "version": "0.0.1",
   "main": "va-validation.html",
   "license": "MIT",
   "authors": [
