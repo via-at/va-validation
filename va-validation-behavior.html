@@ -1,0 +1,80 @@
+<script src="../validator-js/validator.min.js"></script>
+
+<script>
+  VA.BaseValidationBehavior = {
+    
+    validateRequired: function (target) {
+      return target !== undefined && target !== null && target !== '';
+    }
+  };
+  
+  VA.CoreValidationBehavior = {
+    
+    properties: {
+      
+      required: {
+        type: Boolean
+      },
+      
+      invalid: {
+        type: Boolean
+      }
+    },
+    
+    handleValidationError: function () {},
+    
+    forceInvalid: function (type) {
+      this.invalid = true;
+      
+      if (type) {
+        this.handleValidationError(type);
+      }
+    },
+    
+    _validate: function () {
+      var type, targets;
+      var valid = true;
+      
+      if (arguments.length == 1) {
+        if (this.required === true) {
+          valid = this._dispatchValidator('required', [arguments[0]])
+        }
+      } else if (arguments.length >= 2) {
+        type = arguments[0];
+        targets = Array.prototype.splice.call(arguments, 1);
+        
+        if (this.required === true) {
+          valid = this._dispatchValidator('required', [targets[0]])
+        }
+        
+        if (valid) {
+          valid = this._dispatchValidator(type, targets);
+        }
+      }
+      
+      return valid;
+    },
+    
+    _dispatchValidator: function (type, targets) {
+      var name = 'validate' + type.charAt(0).toUpperCase() + type.slice(1);
+      
+      if (!this[name] || typeof this[name] !== 'function') {
+        throw new Error("There is no validator for '" + type + "'");
+      }
+      
+      var valid = this[name].apply(this, targets);
+      this.invalid = !valid;
+      
+      if (!valid) {
+        this.handleValidationError(type);
+      }
+      
+      return valid;
+    }
+  };
+  
+  VA.ValidationBehavior = [
+    VA.BaseValidationBehavior,
+    VA.CoreValidationBehavior
+  ];
+</script>
