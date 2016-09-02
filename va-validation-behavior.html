@@ -1,28 +1,50 @@
 <script src="../validator-js/validator.min.js"></script>
 
 <script>
+(function () {
+  
+  // Built-in validators.
   VA.BaseValidationBehavior = {
     
-    validateRequired: function (target) {
-      return target !== undefined && target !== null && target !== '';
+    /**
+     * Validates if the value is defined or not empty.
+     */
+    validateRequired: function (value) {
+      return value !== undefined && value !== null && value !== '';
     }
   };
   
+  // Main validation behavior. The behavior wraps validator.js that defines
+  // general validators.
   VA.CoreValidationBehavior = {
     
     properties: {
       
+      /**
+       * If the required property is true, input value is required.
+       */
       required: {
         type: Boolean
       },
       
+      /**
+       * If there is an invalid value, the invalid property becomes false.
+       */
       invalid: {
         type: Boolean
       }
     },
     
+    /**
+     * Override.
+     * Handles validation error when invalid value exists. This method is assigned
+     * the error type that is validator name as argument.
+     */
     handleValidationError: function () {},
     
+    /**
+     * Forces this validation fail.
+     */
     forceInvalid: function (type) {
       this.invalid = true;
       
@@ -35,18 +57,27 @@
       var type, targets;
       var valid = true;
       
+      // If no validator name is specified and required rule is set, validates whether
+      // the value is not empty or undefined.
       if (arguments.length == 1) {
         if (this.required === true) {
           valid = this._dispatchValidator('required', [arguments[0]])
         }
+        
+      // If validator name and value are specified, valudates with required validator if
+      // required rule is set and specified validator.
       } else if (arguments.length >= 2) {
         type = arguments[0];
         targets = Array.prototype.splice.call(arguments, 1);
         
         if (this.required === true) {
+          // Validates first target because the method assumes second and the subsequent
+          // targets are optional for another validator.
           valid = this._dispatchValidator('required', [targets[0]])
         }
         
+        // Previous validator determines the value is invalid, the specified validator
+        // is never dispatched.
         if (valid) {
           valid = this._dispatchValidator(type, targets);
         }
@@ -55,16 +86,25 @@
       return valid;
     },
     
+    /**
+     * The dispatcher calls user defined validator, built-in validator or
+     * a validator defined in validator.js.
+     */
     _dispatchValidator: function (type, targets) {
-      var name = 'validate' + type.charAt(0).toUpperCase() + type.slice(1);
+      var name = type.charAt(0).toUpperCase() + type.slice(1);
+      var vldtr = this['validate' + name];
       
-      if (!this[name] || typeof this[name] !== 'function') {
-        throw new Error("There is no validator for '" + type + "'");
+      if (!isValidator(vldtr)) {
+        vldtr = validator['is' + name];
+        if (!isValidator(vldtr)) {
+          throw new Error("There is no validator for '" + type + "'");
+        }
       }
       
-      var valid = this[name].apply(this, targets);
+      var valid = vldtr.apply(this, targets);
       this.invalid = !valid;
       
+      // If the value is invalid, calls error handler with error type.
       if (!valid) {
         this.handleValidationError(type);
       }
@@ -73,8 +113,17 @@
     }
   };
   
+  // Merges built-in validators and main validation behavior.
+  // We assume an element prototype has Polymer.FormElementBehavior
+  // and Polymer.PaperInputBehavior as well as above behaviors.
   VA.ValidationBehavior = [
     VA.BaseValidationBehavior,
     VA.CoreValidationBehavior
   ];
+  
+  function isValidator(vldtr) {
+    return !vldtr || typeof vldtr !== 'function';
+  }
+  
+}());
 </script>
