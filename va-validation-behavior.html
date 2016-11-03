@@ -78,7 +78,7 @@
         
         // Previous validator determines the value is invalid, the specified validator
         // is never dispatched.
-        if (valid) {
+        if (valid && targets[0]) {
           valid = this._dispatchValidator(type, targets);
         }
       }
